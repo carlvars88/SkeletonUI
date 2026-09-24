@@ -19,25 +19,34 @@ public struct ShimmerView: View {
     
     public var body: some View {
         GeometryReader { geometry in
-            // Band width is 2w (w = container width). For the loop to reset
-            // invisibly, both phase endpoints must place the band fully
-            // outside the container's visible range [0, w]:
-            //   phase 0 -> band spans [-2w, 0]  (right edge touches 0)
-            //   phase 1 -> band spans [w, 3w]   (left edge touches w)
-            // The old formula (`-w + phase*2w`) put phase 0 at [-w, w],
-            // which fully covers the container instead of hiding the band,
-            // and phase 1 at [w, 3w], which fully exposes the container's
-            // background — so each loop reset jumped between "band fills
-            // everything" and "background fully exposed" instead of
-            // sweeping a highlight across a stable base.
-            let bandWidth = geometry.size.width * 2
-            LinearGradient(
-                colors: [config.baseColor, config.highlightColor, config.baseColor],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-            .frame(width: bandWidth)
-            .offset(x: -bandWidth + phase * (bandWidth + geometry.size.width))
+            let width = geometry.size.width
+            // A narrower highlight band (0.6w) sweeps over a *persistent*
+            // base fill. The base never disappears — only the highlight
+            // moves — so unlike a single sweeping base→highlight→base
+            // gradient, the container is never left fully uncovered
+            // (showing whatever's behind it) at any point in the loop.
+            //
+            // The highlight band's own loop endpoints still need to be
+            // fully off-screen for the same reason as before: for a band
+            // of width b, spanning [0, b] before any offset, the offset
+            // that places its right edge at the container's left edge (x=0)
+            // is -b, and the offset that places its left edge at the
+            // container's right edge (x=width) is +width. So:
+            //   phase 0 -> offset = -b       -> band spans [-b, 0]
+            //   phase 1 -> offset = +width   -> band spans [width, width+b]
+            // i.e. offset(phase) = -b + phase*(b + width).
+            let bandWidth = width * 0.6
+            ZStack {
+                config.baseColor
+                LinearGradient(
+                    colors: [.clear, config.highlightColor, .clear],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: bandWidth)
+                .offset(x: -bandWidth + phase * (bandWidth + width))
+            }
+            .clipped()
             .onAppear {
                 withAnimation(.linear(duration: config.speed).repeatForever(autoreverses: false)) {
                     phase = 1
