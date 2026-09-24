@@ -19,13 +19,25 @@ public struct ShimmerView: View {
     
     public var body: some View {
         GeometryReader { geometry in
+            // Band width is 2w (w = container width). For the loop to reset
+            // invisibly, both phase endpoints must place the band fully
+            // outside the container's visible range [0, w]:
+            //   phase 0 -> band spans [-2w, 0]  (right edge touches 0)
+            //   phase 1 -> band spans [w, 3w]   (left edge touches w)
+            // The old formula (`-w + phase*2w`) put phase 0 at [-w, w],
+            // which fully covers the container instead of hiding the band,
+            // and phase 1 at [w, 3w], which fully exposes the container's
+            // background — so each loop reset jumped between "band fills
+            // everything" and "background fully exposed" instead of
+            // sweeping a highlight across a stable base.
+            let bandWidth = geometry.size.width * 2
             LinearGradient(
                 colors: [config.baseColor, config.highlightColor, config.baseColor],
                 startPoint: .leading,
                 endPoint: .trailing
             )
-            .frame(width: geometry.size.width * 2)
-            .offset(x: -geometry.size.width + (phase * geometry.size.width * 2))
+            .frame(width: bandWidth)
+            .offset(x: -bandWidth + phase * (bandWidth + geometry.size.width))
             .onAppear {
                 withAnimation(.linear(duration: config.speed).repeatForever(autoreverses: false)) {
                     phase = 1
