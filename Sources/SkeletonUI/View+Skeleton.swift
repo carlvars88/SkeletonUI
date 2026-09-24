@@ -10,7 +10,7 @@ public extension View {
     /// - Returns: A view that displays a skeleton when active.
     @MainActor
     func skeleton(active: Bool, config: SkeletonConfiguration = .default) -> some View {
-        self.modifier(SkeletonModifier(isLoading: active, shape: .rectangle(cornerRadius: 8), config: config))
+        self.modifier(SkeletonModifier(isLoading: active, shape: .rectangle(cornerRadius: config.cornerRadius), config: config))
     }
 }
 #endif
